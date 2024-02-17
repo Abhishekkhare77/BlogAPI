@@ -15,7 +15,6 @@ class BlogPostIn(BaseModel):
     title: str = Field(..., title="Title of the blog post")
     content: str = Field(..., title="Content of the blog post")
     author: str = Field(..., title="Author of the blog post")
-    owner_id: str = Field(..., title="Owner ID of the blog post")
 
 class BlogPostOut(BlogPostIn):
     id: str  # Use string type for MongoDB ObjectId
