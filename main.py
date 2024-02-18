@@ -6,9 +6,7 @@ app = FastAPI()
 
 # Define a list of allowed origins for CORS
 # You can use ["*"] to allow all origins
-allowed_origins = [
-    "http://localhost:3000",  # Allow frontend application hosted on localhost:3000
-]
+allowed_origins = ["*"]
 
 # Add CORSMiddleware to the application
 app.add_middleware(
