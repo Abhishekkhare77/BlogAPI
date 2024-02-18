@@ -21,8 +21,19 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class User(BaseModel):
+    id: Optional[str] = None
     username: str 
     password: str
+
+    
+    class Config:
+        orm_mode = True
+        schema_extra = {
+            "example": {
+                "username": "johndoe",
+                "password": "secret",
+            }
+        }
 
 @router.post("/register")
 async def register(user: User,db=Depends(get_database)):
@@ -90,8 +101,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_d
         user_doc = await db.users.find_one({"username": username})
         if user_doc is None:
             raise credentials_exception
-        # Assuming your User model can be initialized with a document from the database:
-        user = User(**user_doc)
+        # Convert the ObjectId to a string and include it in the User instance
+        user_id = str(user_doc["_id"])
+        user = User(id=user_id, **user_doc)
         return user
     except JWTError:
         raise credentials_exception

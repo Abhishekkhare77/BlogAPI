@@ -4,6 +4,8 @@ from typing import List
 from db import get_database
 from bson import ObjectId
 from auth import get_current_user
+from typing import Optional
+from datetime import datetime
 
 router = APIRouter(
     prefix="/blog",
@@ -17,7 +19,21 @@ class BlogPostIn(BaseModel):
     author: str = Field(..., title="Author of the blog post")
 
 class BlogPostOut(BlogPostIn):
-    id: str  # Use string type for MongoDB ObjectId
+    id: str
+
+class CommentBase(BaseModel):
+    content: str = Field(..., title="Content of the comment")
+    author_id: str = Field(..., title="Author ID of the comment")
+
+class CommentCreate(CommentBase):
+    pass
+
+class Comment(CommentBase):
+    id: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        orm_mode = True
 
 # Helper function to parse MongoDB document to Pydantic model
 def post_model(entity) -> BlogPostOut:
@@ -67,4 +83,20 @@ async def delete_post(post_id: str, db=Depends(get_database), current_user=Depen
         return {"message": "Post deleted successfully"}
     else:
         raise HTTPException(status_code=404, detail="Post not found")
+    
+@router.post("/posts/{post_id}/comments/", response_model=Comment)
+async def create_comment(post_id: str, comment: CommentCreate, db=Depends(get_database), current_user=Depends(get_current_user)):
+    comment_dict = comment.dict()
+    print(current_user)
+    comment_dict["author_id"] = current_user.id
+    comment_dict["post_id"] = post_id
+    result = await db["comments"].insert_one(comment_dict)
+    new_comment = await db["comments"].find_one({"_id": result.inserted_id})
+    return Comment(**new_comment, id=str(new_comment["_id"]))
+
+@router.get("/posts/{post_id}/comments/", response_model=List[Comment])
+async def read_comments(post_id: str, db=Depends(get_database)):
+    comments = await db["comments"].find({"post_id": post_id}).to_list(100)
+    return [Comment(**comment, id=str(comment["_id"])) for comment in comments]
+
 
