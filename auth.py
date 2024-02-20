@@ -24,14 +24,18 @@ class User(BaseModel):
     id: Optional[str] = None
     username: str 
     password: str
+    profilePic : Optional[str] = None
+    fullName : Optional[str] = None
 
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         schema_extra = {
             "example": {
                 "username": "johndoe",
                 "password": "secret",
+                "profilePic": "https://example.com/profilePic.jpg",
+                "fullName": "John Doe"
             }
         }
 
@@ -41,8 +45,8 @@ async def register(user: User,db=Depends(get_database)):
     user_in_db = await db.users.find_one({"username": user.username})
     if user_in_db:
         raise HTTPException(status_code=400, detail="Username already registered")
-    await db.users.insert_one({"username": user.username, "password": hashed_password})
-    return {"username": user.username, "message": "User registered successfully"}
+    await db.users.insert_one({"username": user.username, "password": hashed_password, "profilePic": user.profilePic, "fullName": user.fullName})
+    return {"username": user.username, "message": "User registered successfully","fullName": user.fullName}
 
 
 SECRET_KEY = "a very secret key"

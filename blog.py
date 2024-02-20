@@ -42,7 +42,7 @@ def post_model(entity) -> BlogPostOut:
 @router.post("/posts/", response_model=BlogPostOut)
 async def create_post(post: BlogPostIn, db=Depends(get_database), current_user=Depends(get_current_user)):
     post_dict = post.dict()
-    post_dict["owner_id"] = current_user['_id']  # Set the owner_id to the current user's ID
+    post_dict["owner_id"] = current_user.id  # Set the owner_id to the current user's ID
     result = await db["blogposts"].insert_one(post_dict)
     new_post = await db["blogposts"].find_one({"_id": result.inserted_id})
     return post_model(new_post)
