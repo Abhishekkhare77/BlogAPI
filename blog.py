@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi import status
 from pydantic import BaseModel, Field
 from typing import List
 from db import get_database
@@ -62,7 +63,7 @@ async def read_post(post_id: str, db=Depends(get_database)):
 @router.put("/posts/{post_id}", response_model=BlogPostOut)
 async def update_post(post_id: str, updated_post: BlogPostIn, db=Depends(get_database), current_user=Depends(get_current_user)):
     post = await db["blogposts"].find_one({"_id": ObjectId(post_id)})
-    if str(post['owner_id']) != str(current_user['_id']):
+    if str(post['owner_id']) != str(current_user.id):
         raise HTTPException(status_code=403, detail="Not authorized to update this post")
     # Exclude owner_id from the update payload
     update_data = updated_post.dict(exclude_unset=True)
@@ -73,16 +74,20 @@ async def update_post(post_id: str, updated_post: BlogPostIn, db=Depends(get_dat
     else:
         raise HTTPException(status_code=404, detail="Post not found")
 
-@router.delete("/posts/{post_id}", response_model=BlogPostOut)
+
+@router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_post(post_id: str, db=Depends(get_database), current_user=Depends(get_current_user)):
     post = await db["blogposts"].find_one({"_id": ObjectId(post_id)})
-    if str(post['owner_id']) != str(current_user['_id']):
+    if post is None:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if str(post.get('owner_id')) != str(current_user.id):
         raise HTTPException(status_code=403, detail="Not authorized to delete this post")
     result = await db["blogposts"].delete_one({"_id": ObjectId(post_id)})
     if result.deleted_count:
-        return {"message": "Post deleted successfully"}
+        return {"detail": "Post deleted successfully"}  # You can simply return a detail message
     else:
         raise HTTPException(status_code=404, detail="Post not found")
+
     
 @router.post("/posts/{post_id}/comments/", response_model=Comment)
 async def create_comment(post_id: str, comment: CommentCreate, db=Depends(get_database), current_user=Depends(get_current_user)):
