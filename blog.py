@@ -60,10 +60,11 @@ async def read_post(post_id: str, db=Depends(get_database)):
         return post_model(post)
     raise HTTPException(status_code=404, detail="Post not found")
 
+
 @router.put("/posts/{post_id}", response_model=BlogPostOut)
 async def update_post(post_id: str, updated_post: BlogPostIn, db=Depends(get_database), current_user=Depends(get_current_user)):
     post = await db["blogposts"].find_one({"_id": ObjectId(post_id)})
-    if str(post['owner_id']) != str(current_user.id):
+    if str(post.get('owner_id')) != str(current_user.id):
         raise HTTPException(status_code=403, detail="Not authorized to update this post")
     # Exclude owner_id from the update payload
     update_data = updated_post.dict(exclude_unset=True)
